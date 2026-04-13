@@ -1,11 +1,13 @@
 import { Link, NavLink } from "react-router";
 import { useLanguage, t } from "../context/LanguageContext";
-import { Search, Bell, Globe, Menu, X } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { Search, Bell, Globe, Menu, X, LogIn, LogOut } from "lucide-react";
 import { useState } from "react";
 import { clsx } from "clsx";
 
 export function Navbar() {
   const { language, setLanguage } = useLanguage();
+  const { user, login, logout, loading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
@@ -94,9 +96,28 @@ export function Navbar() {
               {t(language, "Workspace", "工作台")}
             </Link>
 
-            <button className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border border-border flex items-center justify-center text-sm font-bold shadow-sm">
-              K
-            </button>
+            {user ? (
+              <div className="relative group">
+                <button className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border border-border flex items-center justify-center text-sm font-bold shadow-sm">
+                  {user.name.charAt(0)}
+                </button>
+                <div className="absolute right-0 mt-2 w-48 bg-card border border-border/50 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border/40">
+                    <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                  </div>
+                  <button onClick={logout} className="flex items-center gap-2 w-full px-4 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-left">
+                    <LogOut className="h-4 w-4" />
+                    {t(language, "Sign Out", "退出登录")}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={login} disabled={loading} className="h-9 px-4 rounded-md bg-primary text-primary-foreground font-medium text-sm flex items-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-50">
+                <LogIn className="h-4 w-4" />
+                {t(language, "Sign In", "登录")}
+              </button>
+            )}
           </div>
 
           <div className="md:hidden flex items-center gap-4">

@@ -1,10 +1,47 @@
 import { useLanguage, t } from "../context/LanguageContext";
-import { Shield, Activity, Users, Settings, Database, Server, Clock, AlertOctagon, TerminalSquare } from "lucide-react";
+import { Shield, Activity, Users, Settings, Database, Server, Clock, AlertOctagon, TerminalSquare, Loader2 } from "lucide-react";
 import { Link } from "react-router";
 import { clsx } from "clsx";
+import { useState, useEffect } from "react";
 
 export function AdminDashboard() {
   const { language } = useLanguage();
+  const [metrics, setMetrics] = useState<any[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadAdminData() {
+      setLoading(true);
+      try {
+        // Fallback or actual fetch
+        const res = await fetch('/api/v1/admin/metrics');
+        if (res.ok) {
+          const data = await res.json();
+          setMetrics(data.metrics);
+          setLogs(data.logs);
+        } else {
+          setMetrics([
+            { title: "Total Users", value: "142,304", trend: "+12% MoM", status: "good" },
+            { title: "Active Projects", value: "12,450", trend: "+5% MoM", status: "good" },
+            { title: "MCP Invocations", value: "8.4M", trend: "High load", status: "warning" },
+            { title: "Reported Content", value: "24", trend: "Needs review", status: "error" },
+          ]);
+          setLogs([
+            { time: "2 mins ago", actor: "Aura Agent", action: "mcp.call_tool (read_file)", status: "200 OK", latency: "45ms" },
+            { time: "5 mins ago", actor: "Enterprise Key #4", action: "api.v1.projects.create", status: "201 Created", latency: "120ms" },
+            { time: "12 mins ago", actor: "Nexus DB Bot", action: "mcp.call_tool (execute_query)", status: "200 OK", latency: "850ms" },
+            { time: "15 mins ago", actor: "Unknown IP", action: "api.v1.auth.login", status: "401 Unauthorized", latency: "12ms", error: true },
+          ]);
+        }
+      } catch (err) {
+        console.error("Failed to load admin data", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadAdminData();
+  }, []);
 
   return (
     <div className="flex flex-col flex-1 bg-background h-screen overflow-hidden">
@@ -72,12 +109,9 @@ export function AdminDashboard() {
 
             {/* Metrics */}
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                { title: "Total Users", value: "142,304", trend: "+12% MoM", status: "good" },
-                { title: "Active Projects", value: "12,450", trend: "+5% MoM", status: "good" },
-                { title: "MCP Invocations", value: "8.4M", trend: "High load", status: "warning" },
-                { title: "Reported Content", value: "24", trend: "Needs review", status: "error" },
-              ].map((stat, i) => (
+              {loading ? (
+                 <div className="col-span-4 flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+              ) : metrics.map((stat, i) => (
                 <div key={i} className="p-5 rounded-xl border border-border/40 bg-card shadow-sm hover:border-primary/30 transition-colors">
                   <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">{stat.title}</div>
                   <div className="text-2xl font-extrabold text-foreground mb-2">{stat.value}</div>
@@ -117,12 +151,9 @@ export function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
-                    {[
-                      { time: "2 mins ago", actor: "Aura Agent", action: "mcp.call_tool (read_file)", status: "200 OK", latency: "45ms" },
-                      { time: "5 mins ago", actor: "Enterprise Key #4", action: "api.v1.projects.create", status: "201 Created", latency: "120ms" },
-                      { time: "12 mins ago", actor: "Nexus DB Bot", action: "mcp.call_tool (execute_query)", status: "200 OK", latency: "850ms" },
-                      { time: "15 mins ago", actor: "Unknown IP", action: "api.v1.auth.login", status: "401 Unauthorized", latency: "12ms", error: true },
-                    ].map((log, i) => (
+                    {loading ? (
+                      <tr><td colSpan={5} className="px-6 py-10 text-center"><Loader2 className="h-6 w-6 animate-spin text-primary inline" /></td></tr>
+                    ) : logs.map((log, i) => (
                       <tr key={i} className="hover:bg-muted/10 transition-colors">
                         <td className="px-6 py-3 font-mono text-[11px] text-muted-foreground whitespace-nowrap">{log.time}</td>
                         <td className="px-6 py-3 font-medium text-foreground whitespace-nowrap">{log.actor}</td>

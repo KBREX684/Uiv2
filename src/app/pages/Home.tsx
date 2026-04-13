@@ -1,44 +1,46 @@
 import { useLanguage, t } from "../context/LanguageContext";
-import { ArrowRight, Terminal, Zap, Users, Code, Activity, Github } from "lucide-react";
+import { ArrowRight, Terminal, Zap, Users, Code, Activity, Github, Loader2 } from "lucide-react";
 import { Link } from "react-router";
 import { motion } from "motion/react";
-
-const STATS = [
-  { label: { en: "Active Builders", zh: "活跃开发者" }, value: "140K+" },
-  { label: { en: "Projects Launched", zh: "发布项目" }, value: "12K+" },
-  { label: { en: "Open Collaborations", zh: "开放协作" }, value: "8,400" },
-  { label: { en: "MCP Integrations", zh: "MCP 接口接入" }, value: "3,200" },
-];
-
-const FEATURED_PROJECTS = [
-  {
-    title: "Aura Agent",
-    desc: "Autonomous AI agent framework supporting multi-modal inputs.",
-    tags: ["AI", "Rust", "MCP"],
-    img: "https://images.unsplash.com/photo-1775994121020-86426451f8bf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhaSUyMGNvZGUlMjBpbnRlcmZhY2V8ZW58MXx8fHwxNzc2MDg4NjU1fDA&ixlib=rb-4.1.0&q=80&w=1080",
-    author: "David L.",
-    stars: 1204
-  },
-  {
-    title: "Nexus DB",
-    desc: "Next-generation vector database for high-throughput AI workloads.",
-    tags: ["Database", "C++", "Vector"],
-    img: "https://images.unsplash.com/photo-1763718528755-4bca23f82ac3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdGFydHVwJTIwcHJvamVjdCUyMGRhc2hib2FyZHxlbnwxfHx8fDE3NzYwODg2NTV8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    author: "Nexus Team",
-    stars: 340
-  },
-  {
-    title: "Vibe UI",
-    desc: "Dark-themed minimal UI component library for React and Tailwind.",
-    tags: ["Frontend", "React", "Design System"],
-    img: "https://images.unsplash.com/photo-1753450298481-362990f811ea?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkZXZlbG9wZXIlMjBwcm9maWxlfGVufDF8fHx8MTc3NjA4ODY1NXww&ixlib=rb-4.1.0&q=80&w=1080",
-    author: "Sarah W.",
-    stars: 890
-  }
-];
+import { useState, useEffect } from "react";
 
 export function Home() {
   const { language } = useLanguage();
+  const [stats, setStats] = useState<any[]>([]);
+  const [featuredProjects, setFeaturedProjects] = useState<any[]>([]);
+  const [discussions, setDiscussions] = useState<any[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [statsRes, projRes, discRes, teamsRes] = await Promise.all([
+          fetch('/api/v1/stats').then(r => r.json()),
+          fetch('/api/v1/projects/featured').then(r => r.json()),
+          fetch('/api/v1/discussions').then(r => r.json()),
+          fetch('/api/v1/teams').then(r => r.json())
+        ]);
+        setStats(statsRes);
+        setFeaturedProjects(projRes);
+        setDiscussions(discRes.slice(0, 4));
+        setTeams(teamsRes.slice(0, 3));
+      } catch (err) {
+        console.error("Failed to load dashboard data", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex flex-1 items-center justify-center bg-background min-h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col flex-1">
@@ -88,7 +90,7 @@ export function Home() {
             transition={{ duration: 0.7, delay: 0.2 }}
             className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-4 p-6 rounded-xl border border-border/40 bg-muted/20 backdrop-blur-md"
           >
-            {STATS.map((stat, i) => (
+            {stats.map((stat, i) => (
               <div key={i} className="text-center">
                 <div className="text-3xl font-bold text-foreground mb-1">{stat.value}</div>
                 <div className="text-sm text-muted-foreground">{t(language, stat.label.en, stat.label.zh)}</div>
@@ -117,8 +119,8 @@ export function Home() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {FEATURED_PROJECTS.map((project, i) => (
-              <Link to={`/projects/proj-${i}`} key={i} className="group rounded-xl border border-border/40 bg-card overflow-hidden hover:border-primary/50 transition-colors hover:shadow-[0_0_20px_rgba(59,130,246,0.1)]">
+            {featuredProjects.map((project, i) => (
+              <Link to={`/projects/${project.id}`} key={project.id} className="group rounded-xl border border-border/40 bg-card overflow-hidden hover:border-primary/50 transition-colors hover:shadow-[0_0_20px_rgba(59,130,246,0.1)]">
                 <div className="h-48 overflow-hidden relative">
                   <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent z-10" />
                   <img src={project.img} alt={project.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -167,25 +169,26 @@ export function Home() {
               </h2>
               
               <div className="space-y-4">
-                {[1, 2, 3, 4].map((item) => (
-                  <div key={item} className="p-5 rounded-lg border border-border/40 bg-card hover:border-border/80 transition-colors flex gap-4">
+                {discussions.map((item, index) => (
+                  <div key={item.id} className="p-5 rounded-lg border border-border/40 bg-card hover:border-border/80 transition-colors flex gap-4">
                     <div className="hidden sm:flex flex-col items-center gap-1">
                       <button className="text-muted-foreground hover:text-primary"><ArrowRight className="h-5 w-5 -rotate-90" /></button>
-                      <span className="font-bold text-foreground">{42 - item * 5}</span>
+                      <span className="font-bold text-foreground">{42 - index * 5}</span>
                       <button className="text-muted-foreground hover:text-destructive"><ArrowRight className="h-5 w-5 rotate-90" /></button>
                     </div>
                     <div className="flex-1">
-                      <Link to={`/discussions/post-${item}`} className="text-lg font-medium text-foreground hover:text-primary transition-colors block mb-1">
-                        {t(language, `How to scale PostgreSQL for multi-tenant AI applications? (Part ${item})`, `如何为多租户 AI 应用扩展 PostgreSQL 架构？(篇 ${item})`)}
+                      <Link to={`/discussions/${item.id}`} className="text-lg font-medium text-foreground hover:text-primary transition-colors block mb-1">
+                        {item.title}
                       </Link>
                       <p className="text-sm text-muted-foreground mb-3 line-clamp-1">
-                        We are currently building an AI native agent platform, and struggling with vector search performance when data...
+                        {item.excerpt}
                       </p>
                       <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {12 + item} replies</span>
-                        <span className="px-2 py-0.5 rounded-sm bg-muted text-foreground">Database</span>
-                        <span className="px-2 py-0.5 rounded-sm bg-muted text-foreground">Architecture</span>
-                        <span>• 2 hours ago</span>
+                        <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {item.replies} replies</span>
+                        {item.tags.map((tag: string) => (
+                          <span key={tag} className="px-2 py-0.5 rounded-sm bg-muted text-foreground">{tag}</span>
+                        ))}
+                        <span>• {item.time}</span>
                       </div>
                     </div>
                   </div>
@@ -204,17 +207,17 @@ export function Home() {
                 {t(language, "Active Teams", "活跃团队")}
               </h2>
               <div className="space-y-4">
-                {[1, 2, 3].map((item) => (
-                  <div key={item} className="p-4 rounded-lg border border-border/40 bg-card flex items-center gap-4">
+                {teams.map((item, index) => (
+                  <div key={item.id} className="p-4 rounded-lg border border-border/40 bg-card flex items-center gap-4">
                      <div className="h-12 w-12 rounded-md bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-border flex items-center justify-center font-bold text-foreground">
-                       T{item}
+                       T{index + 1}
                      </div>
                      <div className="flex-1">
-                       <h4 className="font-medium text-foreground text-sm">Nexus Core Team</h4>
-                       <p className="text-xs text-muted-foreground mb-1">Looking for: Rust Devs, UI Designers</p>
+                       <h4 className="font-medium text-foreground text-sm">{item.name}</h4>
+                       <p className="text-xs text-muted-foreground mb-1">Looking for: {item.hiring.join(', ')}</p>
                        <div className="flex gap-1">
                          <span className="w-2 h-2 rounded-full bg-success"></span>
-                         <span className="text-[10px] text-muted-foreground">Hiring</span>
+                         <span className="text-[10px] text-muted-foreground">{item.status}</span>
                        </div>
                      </div>
                      <Link to="/teams" className="h-8 px-3 rounded text-xs font-medium border border-border/50 hover:bg-muted flex items-center justify-center transition-colors">

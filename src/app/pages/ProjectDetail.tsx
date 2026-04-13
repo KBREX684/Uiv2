@@ -1,7 +1,7 @@
 import { useLanguage, t } from "../context/LanguageContext";
 import { useParams } from "react-router";
-import { Target, Star, GitFork, Github, Link as LinkIcon, Download, Users, PlusCircle, Globe, Box, Terminal, MessageSquare, ExternalLink, Cpu } from "lucide-react";
-import { useState } from "react";
+import { Target, Star, GitFork, Github, Link as LinkIcon, Download, Users, PlusCircle, Globe, Box, Terminal, MessageSquare, ExternalLink, Cpu, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { clsx } from "clsx";
 import { Link } from "react-router";
 
@@ -9,6 +9,43 @@ export function ProjectDetail() {
   const { language } = useLanguage();
   const { slug } = useParams();
   const [activeTab, setActiveTab] = useState("overview");
+  const [project, setProject] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadProject() {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/v1/projects/${slug}`);
+        if (res.ok) {
+          const data = await res.json();
+          setProject(data);
+        }
+      } catch (err) {
+        console.error("Failed to load project", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (slug) loadProject();
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-1 items-center justify-center bg-background min-h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="flex flex-1 items-center justify-center bg-background flex-col gap-4">
+        <h2 className="text-2xl font-bold text-foreground">Project Not Found</h2>
+        <Link to="/discover" className="text-primary hover:underline">Return to Discover</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col flex-1 bg-background">
@@ -17,33 +54,42 @@ export function ProjectDetail() {
           <div className="flex flex-col lg:flex-row gap-8 items-start justify-between mb-8">
             <div className="flex gap-6 items-start">
               <div className="h-24 w-24 shrink-0 rounded-xl bg-gradient-to-br from-primary to-purple-600 shadow-xl border-4 border-background flex items-center justify-center text-4xl font-black text-white relative z-10 overflow-hidden">
-                <span className="relative z-10 uppercase">{slug?.charAt(0)}</span>
-                <div className="absolute inset-0 bg-black/20" />
+                {project.img ? (
+                  <img src={project.img} alt={project.title} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="relative z-10 uppercase">{project.title?.charAt(0)}</span>
+                )}
+                <div className="absolute inset-0 bg-black/20 pointer-events-none" />
               </div>
               
               <div>
                 <div className="flex flex-wrap items-center gap-3 mb-2">
                   <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground capitalize">
-                    {slug?.replace("-", " ")}
+                    {project.title}
                   </h1>
-                  <span className="px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-success/10 text-success border border-success/20">
-                    Active
+                  <span className={clsx(
+                    "px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider border",
+                    project.status === "Active" ? "bg-success/10 text-success border-success/20" :
+                    project.status === "Beta" ? "bg-warning/10 text-warning border-warning/20" :
+                    "bg-muted text-muted-foreground border-border"
+                  )}>
+                    {project.status || "Active"}
                   </span>
                 </div>
                 
                 <p className="text-lg text-muted-foreground max-w-2xl leading-relaxed mb-4">
-                  An advanced modular agent framework for enterprise AI operations. Supports plugins and MCP integrations out of the box.
+                  {project.desc}
                 </p>
                 
                 <div className="flex flex-wrap items-center gap-4 text-sm font-medium text-muted-foreground">
                   <div className="flex items-center gap-1.5 hover:text-foreground cursor-pointer transition-colors">
-                    <Star className="h-4 w-4" /> 4,500 Stars
+                    <Star className="h-4 w-4" /> {project.stars} Stars
                   </div>
                   <div className="flex items-center gap-1.5 hover:text-foreground cursor-pointer transition-colors">
-                    <GitFork className="h-4 w-4" /> 340 Forks
+                    <GitFork className="h-4 w-4" /> {project.forks} Forks
                   </div>
                   <div className="flex items-center gap-1.5 hover:text-foreground cursor-pointer transition-colors">
-                    <Users className="h-4 w-4" /> 12 Contributors
+                    <Users className="h-4 w-4" /> {Math.floor(project.stars / 100) + 1} Contributors
                   </div>
                 </div>
               </div>

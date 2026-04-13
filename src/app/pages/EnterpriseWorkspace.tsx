@@ -1,20 +1,43 @@
 import { useLanguage, t } from "../context/LanguageContext";
-import { Building2, Radar, Users, Briefcase, Activity, AlertTriangle, Key, Network } from "lucide-react";
+import { Building2, Radar, Users, Briefcase, Activity, AlertTriangle, Key, Network, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useState, useEffect } from "react";
 
 export function EnterpriseWorkspace() {
   const { language } = useLanguage();
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const mockData = [
-    { name: "Mon", interactions: 400 },
-    { name: "Tue", interactions: 300 },
-    { name: "Wed", interactions: 550 },
-    { name: "Thu", interactions: 200 },
-    { name: "Fri", interactions: 278 },
-    { name: "Sat", interactions: 189 },
-    { name: "Sun", interactions: 239 },
-  ];
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        // Simulating an enterprise stats fetch
+        const res = await fetch('/api/v1/stats/enterprise');
+        if (res.ok) {
+          const data = await res.json();
+          setChartData(data);
+        } else {
+          // Fallback mock data
+          setChartData([
+            { name: "Mon", interactions: 400 },
+            { name: "Tue", interactions: 300 },
+            { name: "Wed", interactions: 550 },
+            { name: "Thu", interactions: 200 },
+            { name: "Fri", interactions: 278 },
+            { name: "Sat", interactions: 189 },
+            { name: "Sun", interactions: 239 },
+          ]);
+        }
+      } catch (err) {
+        console.error("Failed to load enterprise data", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   return (
     <div className="flex flex-col flex-1 bg-background">
@@ -86,18 +109,24 @@ export function EnterpriseWorkspace() {
              </div>
              
              <div className="h-72 w-full">
-               <ResponsiveContainer width="100%" height="100%">
-                 <BarChart data={mockData}>
-                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                   <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} />
-                   <YAxis stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} />
-                   <Tooltip 
-                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                     contentStyle={{ backgroundColor: '#1A1F2B', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#E2E8F0' }}
-                   />
-                   <Bar dataKey="interactions" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                 </BarChart>
-               </ResponsiveContainer>
+               {loading ? (
+                 <div className="w-full h-full flex items-center justify-center">
+                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                 </div>
+               ) : (
+                 <ResponsiveContainer width="100%" height="100%">
+                   <BarChart data={chartData}>
+                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                     <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} />
+                     <YAxis stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} />
+                     <Tooltip 
+                       cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                       contentStyle={{ backgroundColor: '#1A1F2B', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#E2E8F0' }}
+                     />
+                     <Bar dataKey="interactions" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                   </BarChart>
+                 </ResponsiveContainer>
+               )}
              </div>
           </div>
           

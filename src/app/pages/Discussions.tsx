@@ -1,24 +1,32 @@
 import { useLanguage, t } from "../context/LanguageContext";
-import { MessageSquare, Flame, Star, TrendingUp, Search, PlusCircle, ThumbsUp, MessageCircle } from "lucide-react";
+import { MessageSquare, Flame, Star, TrendingUp, Search, PlusCircle, ThumbsUp, MessageCircle, Loader2 } from "lucide-react";
 import { Link } from "react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { clsx } from "clsx";
 
 export function Discussions() {
   const { language } = useLanguage();
   const [activeTab, setActiveTab] = useState("recent");
+  const [discussions, setDiscussions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const DISCUSSIONS = Array.from({ length: 12 }).map((_, i) => ({
-    id: `post-${i}`,
-    title: `How to manage large scale state with React and Redux? (${i + 1})`,
-    preview: "I've been working on a enterprise dashboard and the state management is getting out of hand. What are the best practices for structuring Redux store, or should we migrate to Zustand/Jotai?",
-    author: `DevNinja${i}`,
-    time: `${i + 1}h ago`,
-    replies: Math.floor(Math.random() * 50) + 1,
-    upvotes: Math.floor(Math.random() * 200) + 10,
-    tags: ["React", "State Management", "Architecture"],
-    isFeatured: i === 0 || i === 3,
-  }));
+  useEffect(() => {
+    async function loadDiscussions() {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/v1/discussions');
+        if (res.ok) {
+          const data = await res.json();
+          setDiscussions(data);
+        }
+      } catch (err) {
+        console.error("Failed to load discussions", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadDiscussions();
+  }, [activeTab]);
 
   return (
     <div className="flex flex-col flex-1 bg-background">
@@ -75,13 +83,17 @@ export function Discussions() {
         </div>
 
         <div className="space-y-4">
-          {DISCUSSIONS.map((post) => (
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : discussions.map((post) => (
             <div key={post.id} className="p-5 rounded-xl border border-border/40 bg-card hover:border-primary/40 transition-all hover:shadow-md flex gap-4">
               <div className="hidden sm:flex flex-col items-center gap-2 pt-1 shrink-0">
                 <button className="h-8 w-8 rounded bg-muted/50 text-muted-foreground hover:bg-primary/20 hover:text-primary flex items-center justify-center transition-colors">
                   <TrendingUp className="h-4 w-4" />
                 </button>
-                <span className="text-sm font-bold text-foreground">{post.upvotes}</span>
+                <span className="text-sm font-bold text-foreground">{post.upvotes || 42}</span>
               </div>
               
               <div className="flex-1 min-w-0">
@@ -97,14 +109,14 @@ export function Discussions() {
                 </div>
                 
                 <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                  {post.preview}
+                  {post.excerpt || post.preview}
                 </p>
                 
                 <div className="flex flex-wrap items-center justify-between gap-4 mt-auto">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
                       <div className="h-5 w-5 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-[8px] text-white font-bold">
-                        {post.author.charAt(0)}
+                        {post.author?.charAt(0) || "A"}
                       </div>
                       <span className="text-xs font-medium text-muted-foreground">{post.author}</span>
                     </div>
@@ -114,7 +126,7 @@ export function Discussions() {
                   
                   <div className="flex items-center gap-4">
                     <div className="flex flex-wrap gap-1.5">
-                      {post.tags.map(tag => (
+                      {post.tags?.map((tag: string) => (
                         <span key={tag} className="px-2 py-0.5 rounded-sm bg-muted text-muted-foreground text-[10px] font-medium border border-border/30">
                           {tag}
                         </span>

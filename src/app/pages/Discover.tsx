@@ -1,23 +1,30 @@
 import { useLanguage, t } from "../context/LanguageContext";
-import { Search, Filter, SlidersHorizontal, ChevronDown, Check, Star, GitFork, Github } from "lucide-react";
+import { Search, Filter, SlidersHorizontal, ChevronDown, Check, Star, GitFork, Github, Loader2 } from "lucide-react";
 import { Link } from "react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { clsx } from "clsx";
-
-const PROJECTS = Array.from({ length: 9 }).map((_, i) => ({
-  id: `proj-${i}`,
-  title: `Project Zero ${i}`,
-  desc: "An advanced modular agent framework for enterprise AI operations. Supports plugins and MCP integrations out of the box.",
-  tags: ["AI", "Typescript", "MCP"],
-  author: `Author ${i}`,
-  stars: Math.floor(Math.random() * 5000),
-  forks: Math.floor(Math.random() * 500),
-  status: ["Active", "Beta", "Archived"][Math.floor(Math.random() * 3)],
-}));
 
 export function Discover() {
   const { language } = useLanguage();
   const [activeTab, setActiveTab] = useState("all");
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/v1/projects');
+        const data = await res.json();
+        setProjects(data);
+      } catch (err) {
+        console.error("Failed to load projects", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, [activeTab]);
 
   return (
     <div className="flex flex-col flex-1 bg-background">
@@ -133,59 +140,69 @@ export function Discover() {
         <div className="flex-1">
           <div className="flex justify-between items-center mb-4">
             <span className="text-sm text-muted-foreground">
-              {t(language, `Showing 2,450 results`, "显示 2,450 条结果")}
+              {t(language, `Showing ${projects.length} results`, `显示 ${projects.length} 条结果`)}
             </span>
           </div>
           
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {PROJECTS.map((project) => (
-              <div key={project.id} className="group rounded-xl border border-border/40 bg-card p-5 hover:border-primary/50 transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 flex flex-col">
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-md bg-gradient-to-br from-gray-700 to-gray-900 border border-border flex items-center justify-center font-bold text-foreground text-xs">
-                      P{project.id.slice(-1)}
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {projects.map((project) => (
+                <div key={project.id} className="group rounded-xl border border-border/40 bg-card p-5 hover:border-primary/50 transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 flex flex-col">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-md bg-gradient-to-br from-gray-700 to-gray-900 border border-border flex items-center justify-center font-bold text-foreground text-xs overflow-hidden">
+                        {project.img ? (
+                          <img src={project.img} alt={project.title} className="w-full h-full object-cover" />
+                        ) : (
+                          `P${project.id.slice(-1)}`
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">
+                          <Link to={`/projects/${project.id}`} className="before:absolute before:inset-0 before:z-10">{project.title}</Link>
+                        </h3>
+                        <p className="text-xs text-muted-foreground">by {project.author}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">
-                        <Link to={`/projects/${project.id}`} className="before:absolute before:inset-0 before:z-10">{project.title}</Link>
-                      </h3>
-                      <p className="text-xs text-muted-foreground">by {project.author}</p>
-                    </div>
-                  </div>
-                  <span className={clsx(
-                    "text-[10px] px-2 py-0.5 rounded font-medium border",
-                    project.status === "Active" ? "bg-success/10 text-success border-success/20" :
-                    project.status === "Beta" ? "bg-warning/10 text-warning border-warning/20" :
-                    "bg-muted text-muted-foreground border-border"
-                  )}>
-                    {project.status}
-                  </span>
-                </div>
-                
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-3 flex-1">
-                  {project.desc}
-                </p>
-                
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {project.tags.map(tag => (
-                    <span key={tag} className="px-2 py-0.5 rounded-sm bg-accent/50 text-accent-foreground text-[10px] font-medium border border-accent">
-                      {tag}
+                    <span className={clsx(
+                      "text-[10px] px-2 py-0.5 rounded font-medium border",
+                      project.status === "Active" ? "bg-success/10 text-success border-success/20" :
+                      project.status === "Beta" ? "bg-warning/10 text-warning border-warning/20" :
+                      "bg-muted text-muted-foreground border-border"
+                    )}>
+                      {project.status}
                     </span>
-                  ))}
-                </div>
-                
-                <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/40">
-                  <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
-                    <span className="flex items-center gap-1 hover:text-foreground transition-colors z-20 relative cursor-pointer"><Star className="h-3.5 w-3.5" /> {project.stars}</span>
-                    <span className="flex items-center gap-1 hover:text-foreground transition-colors z-20 relative cursor-pointer"><GitFork className="h-3.5 w-3.5" /> {project.forks}</span>
                   </div>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors z-20 relative">
-                    <Github className="h-4 w-4" />
-                  </a>
+                  
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-3 flex-1">
+                    {project.desc}
+                  </p>
+                  
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {project.tags.map((tag: string) => (
+                      <span key={tag} className="px-2 py-0.5 rounded-sm bg-accent/50 text-accent-foreground text-[10px] font-medium border border-accent">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  
+                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/40">
+                    <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
+                      <span className="flex items-center gap-1 hover:text-foreground transition-colors z-20 relative cursor-pointer"><Star className="h-3.5 w-3.5" /> {project.stars}</span>
+                      <span className="flex items-center gap-1 hover:text-foreground transition-colors z-20 relative cursor-pointer"><GitFork className="h-3.5 w-3.5" /> {project.forks}</span>
+                    </div>
+                    <a href="#" className="text-muted-foreground hover:text-foreground transition-colors z-20 relative">
+                      <Github className="h-4 w-4" />
+                    </a>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
           
           <div className="mt-8 flex justify-center">
             <div className="flex items-center gap-1">
